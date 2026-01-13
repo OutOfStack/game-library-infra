@@ -1,4 +1,9 @@
-apiVersion: v1
 kind: Namespace
+apiVersion: v1
+metadata:
+  name: game-library
+---
+kind: Namespace
+apiVersion: v1
 metadata:
   name: game-library-infra
