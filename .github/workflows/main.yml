@@ -1,0 +1,43 @@
+name: "deploy infra"
+
+on:
+  push:
+    branches: [main]
+    paths: [".k8s/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-infra
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set context
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.K8S_CLUSTER_CONFIG }}
+
+      - name: Replace variables
+        run: |
+          sed -i'' \
+          -e 's/_DOMAIN_/${{ vars.DOMAIN }}/g' \
+          .k8s/*.yaml
+
+      - name: Diff changes
+        run: |
+          kubectl diff -f .k8s/namespace.yaml || true
+          kubectl diff -f .k8s/zipkin.yaml || true
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f .k8s/namespace.yaml
+          kubectl apply -f .k8s/zipkin.yaml

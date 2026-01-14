@@ -1,0 +1,85 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: zipkin
+  namespace: game-library-infra
+  labels:
+    app: zipkin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin:3.5
+          ports:
+            - name: zipkin
+              containerPort: 9411
+          envFrom:
+            - configMapRef:
+                name: zipkin-config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: zipkin
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: zipkin
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: zipkin-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: zipkin
+  ports:
+    - name: zipkin
+      protocol: TCP  
+      port: 9411
+      targetPort: zipkin
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: zipkin-config
+  namespace: game-library-infra
+data:
+  ZIPKIN_UI_BASEPATH: "/zipkin"
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: zipkin-ingress
+  namespace: game-library-infra
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt-dns
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - trace._DOMAIN_
+      secretName: zipkin-tls
+  rules:
+    - host: trace._DOMAIN_
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: zipkin-service
+                port:
+                  name: zipkin
