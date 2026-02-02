@@ -24,6 +24,10 @@ stop:
 clean:
 	docker compose down -v
 
+# Build example application
+build-example:
+	cd example && go build -o bin/example
+
 # Run example Go application
 run-example:
 	cd example && go run .

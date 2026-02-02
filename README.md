@@ -34,7 +34,7 @@ make clean
 |---------|-----|-------------|
 | Zipkin | http://localhost:9411/zipkin | No authentication required |
 | Prometheus | http://localhost:9090 | No authentication required |
-| Graylog | http://localhost:9000 | Username: `admin` Password: `admin` |
+| Graylog | http://localhost:9000 | `admin:admin` |
 | OpenSearch | http://localhost:9200 | No authentication (security disabled) |
 
 ## Graylog Setup
