@@ -43,6 +43,35 @@ data:
             action: keep
             regex: api
 ---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: prometheus-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: prometheus-storage-class
+  hostPath:
+    # hostPath is ok since this is a single-node dev cluster
+    # make folder writable: chmod -R o+w /data/prometheus
+    path: /data/prometheus
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: prometheus-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: prometheus-storage-class
+---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
@@ -52,6 +81,9 @@ metadata:
     app: prometheus
 spec:
   replicas: 1
+  strategy:
+    # use this because of lock db directory error
+    type: Recreate
   selector:
     matchLabels:
       app: prometheus
@@ -132,32 +164,3 @@ spec:
                 name: prometheus-service
                 port:
                   name: prometheus
----
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: prometheus-pv
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: prometheus-storage-class
-  hostPath:
-    # hostPath is ok since this is a single-node dev cluster
-    # make folder writable: chmod -R o+w /data/prometheus
-    path: /data/prometheus
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: prometheus-pvc
-  namespace: game-library-infra
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-  storageClassName: prometheus-storage-class
