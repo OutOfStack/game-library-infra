@@ -1,0 +1,167 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: prometheus-config
+  namespace: game-library-infra
+data:
+  # kubernetes_sd_configs requires ServiceAccount, ClusterRole, ClusterRoleBinding set up, but currently RBAC is not enabled
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      scrape_timeout: 5s
+    
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+          
+      - job_name: 'game-library'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - game-library
+        relabel_configs:
+          - source_labels: [ __meta_kubernetes_service_name ]
+            action: keep
+            regex: game-library-service
+          - source_labels: [ __meta_kubernetes_endpoint_port_name ]
+            action: keep
+            regex: api
+            
+      - job_name: 'game-library-auth'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - game-library
+        relabel_configs:
+          - source_labels: [ __meta_kubernetes_service_name ]
+            action: keep
+            regex: game-library-auth-service
+          - source_labels: [ __meta_kubernetes_endpoint_port_name ]
+            action: keep
+            regex: api
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: prometheus-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: prometheus-storage-class
+  hostPath:
+    # hostPath is ok since this is a single-node dev cluster
+    # make folder writable: chmod -R o+w /data/prometheus
+    path: /data/prometheus
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: prometheus-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: prometheus-storage-class
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: prometheus
+  namespace: game-library-infra
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  strategy:
+    # use this because of lock db directory error
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.8.1
+          args:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+          ports:
+            - name: prometheus
+              containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: prometheus
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: prometheus
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            name: prometheus-config
+        - name: prometheus-storage-volume
+          persistentVolumeClaim:
+            claimName: prometheus-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - protocol: TCP
+      name: prometheus
+      port: 9090
+      targetPort: prometheus
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: prometheus-ingress
+  namespace: game-library-infra
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt-dns
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - metrics._DOMAIN_
+      secretName: prometheus-tls
+  rules:
+    - host: metrics._DOMAIN_
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometheus-service
+                port:
+                  name: prometheus

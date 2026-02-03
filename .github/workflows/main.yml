@@ -36,8 +36,10 @@ jobs:
         run: |
           kubectl diff -f .k8s/namespace.yaml || true
           kubectl diff -f .k8s/zipkin.yaml || true
+          kubectl diff -f .k8s/prometheus.yaml || true
 
       - name: Apply manifests
         run: |
           kubectl apply -f .k8s/namespace.yaml
           kubectl apply -f .k8s/zipkin.yaml
+          kubectl apply -f .k8s/prometheus.yaml
