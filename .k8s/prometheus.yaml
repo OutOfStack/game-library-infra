@@ -4,6 +4,7 @@ metadata:
   name: prometheus-config
   namespace: game-library-infra
 data:
+  # kubernetes_sd_configs requires ServiceAccount, ClusterRole, ClusterRoleBinding set up, but currently RBAC is not enabled
   prometheus.yml: |
     global:
       scrape_interval: 15s
