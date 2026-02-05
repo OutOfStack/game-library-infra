@@ -1,0 +1,86 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: jaeger
+  namespace: game-library-infra
+  labels:
+    app: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/jaeger:2.14.1
+          ports:
+            - name: ui
+              containerPort: 16686
+            - name: otlp-http
+              containerPort: 4318
+            - name: otlp-grpc
+              containerPort: 4317
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: jaeger-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: jaeger
+  ports:
+    - name: ui
+      protocol: TCP
+      port: 16686
+      targetPort: ui
+    - name: otlp-http
+      protocol: TCP
+      port: 4318
+      targetPort: otlp-http
+    - name: otlp-grpc
+      protocol: TCP
+      port: 4317
+      targetPort: otlp-grpc
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: jaeger-ingress
+  namespace: game-library-infra
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt-dns
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - trace._DOMAIN_
+      secretName: jaeger-tls
+  rules:
+    - host: trace._DOMAIN_
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger-service
+                port:
+                  name: ui

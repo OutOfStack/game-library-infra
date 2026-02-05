@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -12,20 +14,39 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewTracer(log *zap.Logger, serviceName, zipkinEndpoint string) (*sdktrace.TracerProvider, error) {
-	exporter, err := zipkin.New(zipkinEndpoint)
+func newTracerProvider(serviceName, zipkinEndpoint, otlpEndpoint string) (*sdktrace.TracerProvider, error) {
+	zipkinExporter, err := zipkin.New(zipkinEndpoint)
 	if err != nil {
 		return nil, fmt.Errorf("create zipkin exporter: %w", err)
 	}
 
+	otlpExporter, err := otlptracehttp.New(
+		context.Background(),
+		otlptracehttp.WithEndpoint(otlpEndpoint),
+		otlptracehttp.WithInsecure(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create otlp exporter: %w", err)
+	}
+
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
+		sdktrace.WithBatcher(zipkinExporter),
+		sdktrace.WithBatcher(otlpExporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceName(serviceName),
 		)),
 	)
+
+	return tp, nil
+}
+
+func NewTracer(log *zap.Logger, serviceName, zipkinEndpoint, otlpEndpoint string) (*sdktrace.TracerProvider, error) {
+	tp, err := newTracerProvider(serviceName, zipkinEndpoint, otlpEndpoint)
+	if err != nil {
+		return nil, err
+	}
 
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
@@ -39,20 +60,6 @@ func NewTracer(log *zap.Logger, serviceName, zipkinEndpoint string) (*sdktrace.T
 	return tp, nil
 }
 
-func NewClientTracerProvider(serviceName, zipkinEndpoint string) (*sdktrace.TracerProvider, error) {
-	exporter, err := zipkin.New(zipkinEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("create zipkin exporter: %w", err)
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
-		)),
-	)
-
-	return tp, nil
+func NewClientTracerProvider(serviceName, zipkinEndpoint, otlpEndpoint string) (*sdktrace.TracerProvider, error) {
+	return newTracerProvider(serviceName, zipkinEndpoint, otlpEndpoint)
 }

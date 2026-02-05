@@ -1,8 +1,12 @@
-.PHONY: zipkin graylog prometheus all stop clean run-example
+.PHONY: zipkin jaeger graylog prometheus all stop clean run-example
 
 # Start Zipkin
 zipkin:
 	docker compose up -d zipkin
+
+# Start Jaeger
+jaeger:
+	docker compose up -d jaeger
 
 # Start Graylog (includes MongoDB and OpenSearch dependencies)
 graylog:
