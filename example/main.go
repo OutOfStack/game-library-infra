@@ -18,6 +18,7 @@ const (
 	ClientServiceName = "example-client"
 	ServerPort        = "8000"
 	ZipkinEndpoint    = "http://localhost:9411/api/v2/spans"
+	OTLPEndpoint      = "localhost:4318"
 	GraylogAddr       = "localhost:12201"
 	TickerInterval    = 15 * time.Second
 )
@@ -31,7 +32,7 @@ func main() {
 	defer logger.Sync()
 
 	// server tracing
-	serverTP, err := NewTracer(logger, ServerServiceName, ZipkinEndpoint)
+	serverTP, err := NewTracer(logger, ServerServiceName, ZipkinEndpoint, OTLPEndpoint)
 	if err != nil {
 		logger.Fatal("failed to initialize server tracer", zap.Error(err))
 	}
@@ -42,7 +43,7 @@ func main() {
 	}()
 
 	// client tracing
-	clientTP, err := NewClientTracerProvider(ClientServiceName, ZipkinEndpoint)
+	clientTP, err := NewClientTracerProvider(ClientServiceName, ZipkinEndpoint, OTLPEndpoint)
 	if err != nil {
 		logger.Fatal("failed to initialize client tracer", zap.Error(err))
 	}

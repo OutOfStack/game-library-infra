@@ -7,6 +7,7 @@ Infrastructure services for [game-library](https://github.com/OutOfStack/game-li
 | Service | Description |
 |---------|-------------|
 | **Zipkin** | Distributed tracing system |
+| **Jaeger** | Distributed tracing system with native OTLP support |
 | **Graylog** | Log management platform (with MongoDB and OpenSearch) |
 | **Prometheus** | Metrics collection and monitoring |
 
@@ -18,6 +19,7 @@ make all
 
 # Or start individual services
 make zipkin
+make jaeger
 make prometheus
 make graylog
 
@@ -33,6 +35,7 @@ make clean
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | Zipkin | http://localhost:9411/zipkin | No authentication required |
+| Jaeger | http://localhost:16686 | No authentication required |
 | Prometheus | http://localhost:9090 | No authentication required |
 | Graylog | http://localhost:9000 | `admin:admin` |
 | OpenSearch | http://localhost:9200 | No authentication (security disabled) |
@@ -58,7 +61,7 @@ The `example/` folder contains a sample Go application demonstrating integration
 
 ### Features
 
-- **Zipkin tracing** - OpenTelemetry with Zipkin exporter
+- **Distributed tracing** - OpenTelemetry with Zipkin exporter and OTLP exporter (Jaeger)
 - **Graylog logging** - zap logger with GELF output
 - **Prometheus metrics** - request counters, error counters, response duration histograms
 - **Connected traces** - HTTP client and server spans are linked via trace propagation
@@ -88,7 +91,7 @@ make run-example
 example/
 ├── main.go       # Application entry point
 ├── logger.go     # Zap + Graylog logger setup
-├── tracer.go     # OpenTelemetry + Zipkin tracer setup
+├── tracer.go     # OpenTelemetry tracer setup (Zipkin + OTLP exporters)
 ├── metrics.go    # Prometheus metrics middleware
 ├── handlers.go   # HTTP handlers
 ├── client.go     # HTTP client with tracing + load generator

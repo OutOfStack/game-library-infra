@@ -70,10 +70,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - trace._DOMAIN_
+        - zipkin._DOMAIN_
       secretName: zipkin-tls
   rules:
-    - host: trace._DOMAIN_
+    - host: zipkin._DOMAIN_
       http:
         paths:
           - path: /

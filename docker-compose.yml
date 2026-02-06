@@ -8,6 +8,17 @@ services:
     environment:
       ZIPKIN_UI_BASEPATH: /zipkin
 
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/jaeger:2.14.1
+    ports:
+      # UI
+      - "16686:16686"
+      # OTLP HTTP
+      - "4318:4318"
+      # OTLP gRPC
+      - "4317:4317"
+
   # connect from docker network:
   #   docker run -it --rm --network game-library_graylog mongo mongosh --host mongo -u admin -p password --authenticationDatabase admin test
   # connect outside of docker network:
