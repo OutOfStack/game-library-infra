@@ -1,3 +1,15 @@
+# Deploy:
+#   kubectl apply -f .k8s/prometheus.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=prometheus
+#   kubectl logs -n game-library-infra deployment/prometheus
+#
+# Test connectivity (from within cluster):
+#   kubectl run -it --rm curl --image=curlimages/curl --namespace=game-library-infra \
+#     -- curl http://prometheus-service:9090/-/healthy
+#
+# =============================================================================
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -44,22 +56,6 @@ data:
             action: keep
             regex: api
 ---
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: prometheus-pv
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: prometheus-storage-class
-  hostPath:
-    # hostPath is ok since this is a single-node dev cluster
-    # make folder writable: chmod -R o+w /data/prometheus
-    path: /data/prometheus
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -71,7 +67,6 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: prometheus-storage-class
 ---
 kind: Deployment
 apiVersion: apps/v1

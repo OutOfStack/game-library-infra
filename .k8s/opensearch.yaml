@@ -1,0 +1,96 @@
+# Deploy:
+#   kubectl apply -f .k8s/opensearch.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=opensearch
+#   kubectl logs -n game-library-infra deployment/opensearch
+#
+# Test connectivity (from within cluster):
+#   kubectl run -it --rm curl --image=curlimages/curl --namespace=game-library-infra \
+#     -- curl http://opensearch-service:9200
+#
+# Note: Security plugin is disabled for simplicity (single-node dev/small-prod setup).
+# For hardened production, enable the security plugin and configure TLS + authentication.
+#
+# =============================================================================
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: opensearch-config
+  namespace: game-library-infra
+data:
+  cluster.name: "graylog"
+  node.name: "graylog-opensearch"
+  discovery.type: "single-node"
+  bootstrap.memory_lock: "true"
+  OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+  DISABLE_SECURITY_PLUGIN: "true"
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: opensearch
+  namespace: game-library-infra
+  labels:
+    app: opensearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      containers:
+        - name: opensearch
+          image: opensearchproject/opensearch:2.19.4
+          ports:
+            - name: http
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          envFrom:
+            - configMapRef:
+                name: opensearch-config
+          resources:
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: opensearch-data
+              mountPath: /usr/share/opensearch/data
+      volumes:
+        - name: opensearch-data
+          persistentVolumeClaim:
+            claimName: opensearch-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: opensearch-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: opensearch
+  ports:
+    - name: http
+      protocol: TCP
+      port: 9200
+      targetPort: http
+    - name: transport
+      protocol: TCP
+      port: 9300
+      targetPort: transport
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: opensearch-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

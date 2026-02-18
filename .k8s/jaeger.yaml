@@ -1,3 +1,15 @@
+# Deploy:
+#   kubectl apply -f .k8s/jaeger.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=jaeger
+#   kubectl logs -n game-library-infra deployment/jaeger
+#
+# Test connectivity (from within cluster):
+#   kubectl run -it --rm curl --image=curlimages/curl --namespace=game-library-infra \
+#     -- curl http://jaeger-service:16686/status
+#
+# =============================================================================
 kind: ConfigMap
 apiVersion: v1
 metadata:
