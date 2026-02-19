@@ -38,6 +38,9 @@ jobs:
           kubectl diff -f .k8s/zipkin.yaml || true
           kubectl diff -f .k8s/prometheus.yaml || true
           kubectl diff -f .k8s/jaeger.yaml || true
+          kubectl diff -f .k8s/mongo.yaml || true
+          kubectl diff -f .k8s/opensearch.yaml || true
+          kubectl diff -f .k8s/graylog.yaml || true
 
       - name: Apply manifests
         run: |
@@ -45,3 +48,6 @@ jobs:
           kubectl apply -f .k8s/zipkin.yaml
           kubectl apply -f .k8s/prometheus.yaml
           kubectl apply -f .k8s/jaeger.yaml
+          kubectl apply -f .k8s/mongo.yaml
+          kubectl apply -f .k8s/opensearch.yaml
+          kubectl apply -f .k8s/graylog.yaml

@@ -1,0 +1,159 @@
+# Deploy:
+#   kubectl apply -f .k8s/graylog.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=graylog
+#   kubectl logs -n game-library-infra deployment/graylog
+#   # Access UI at https://log._DOMAIN_/
+#   # Default login: admin / <graylog-root-password from secrets.yaml>
+#
+# After first login:
+#   - Create a GELF UDP input on port 12201 (System > Inputs), launch it
+#   - Configure your applications to send logs to graylog-service:12201 (UDP)
+#     or from outside the cluster to the NodePort/LoadBalancer for GELF
+#
+# =============================================================================
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: graylog-config
+  namespace: game-library-infra
+data:
+  # Public URL for the Graylog web interface
+  GRAYLOG_HTTP_EXTERNAL_URI: "https://logs._DOMAIN_/"
+  # Internal cluster URL used for node-to-node communication
+  GRAYLOG_HTTP_PUBLISH_URI: "http://graylog-service:9000/"
+  # Uses K8s service DNS name for OpenSearch (no auth since security plugin is disabled)
+  GRAYLOG_ELASTICSEARCH_HOSTS: "http://opensearch-service:9200"
+  # Index rotation: create a new index every day
+  GRAYLOG_ROTATION_STRATEGY: "time"
+  GRAYLOG_ELASTICSEARCH_MAX_TIME_PER_INDEX: "1d"
+  # Retention: delete indices older than ~2 months (60 daily indices)
+  GRAYLOG_RETENTION_STRATEGY: "delete"
+  GRAYLOG_ELASTICSEARCH_MAX_NUMBER_OF_INDICES: "60"
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: graylog
+  namespace: game-library-infra
+  labels:
+    app: graylog
+spec:
+  replicas: 1
+  strategy:
+    # Graylog uses a Kafka journal lock — Recreate ensures the old pod
+    # is fully terminated before the new one starts.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: graylog
+  template:
+    metadata:
+      labels:
+        app: graylog
+    spec:
+      # Wait for OpenSearch to be reachable before starting Graylog.
+      initContainers:
+        - name: wait-for-opensearch
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for OpenSearch at opensearch-service:9200..."
+              until wget -q --spider http://opensearch-service:9200; do
+                echo "OpenSearch not ready, retrying in 5s..."
+                sleep 5
+              done
+              echo "OpenSearch is ready."
+      containers:
+        - name: graylog
+          image: graylog/graylog:7.0.4
+          ports:
+            - name: http
+              containerPort: 9000
+            - name: gelf-udp
+              containerPort: 12201
+              protocol: UDP
+          envFrom:
+            - configMapRef:
+                name: graylog-config
+          env:
+            - name: GRAYLOG_PASSWORD_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: graylog-password-secret
+            - name: GRAYLOG_ROOT_PASSWORD_SHA2
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: graylog-root-password-sha2
+            - name: GRAYLOG_MONGODB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: graylog-secret
+                  key: graylog-mongodb-uri
+          volumeMounts:
+            - name: graylog-data
+              mountPath: /usr/share/graylog/data/journal
+      volumes:
+        - name: graylog-data
+          persistentVolumeClaim:
+            claimName: graylog-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: graylog-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: graylog
+  ports:
+    - name: http
+      protocol: TCP
+      port: 9000
+      targetPort: http
+    - name: gelf-udp
+      protocol: UDP
+      port: 12201
+      targetPort: gelf-udp
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: graylog-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: graylog-ingress
+  namespace: game-library-infra
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt-dns
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - logs._DOMAIN_
+      secretName: graylog-tls
+  rules:
+    - host: logs._DOMAIN_
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: graylog-service
+                port:
+                  name: http

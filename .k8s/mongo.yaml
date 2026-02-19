@@ -1,0 +1,90 @@
+# Deploy:
+#   kubectl apply -f .k8s/mongo.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=mongo
+#   kubectl logs -n game-library-infra deployment/mongo
+#
+# Connect to mongo shell (from within cluster):
+#   kubectl run -it --rm mongo-shell --image=mongo:8.2 --namespace=game-library-infra \
+#     -- mongosh --host mongo-service -u admin -p <PASSWORD> --authenticationDatabase admin
+#
+# =============================================================================
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: mongo-config
+  namespace: game-library-infra
+data:
+  MONGO_INITDB_DATABASE: "graylog"
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: mongo
+  namespace: game-library-infra
+  labels:
+    app: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:8.2
+          ports:
+            - name: mongo
+              containerPort: 27017
+          envFrom:
+            - configMapRef:
+                name: mongo-config
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-root-username
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-root-password
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+      volumes:
+        - name: mongo-data
+          persistentVolumeClaim:
+            claimName: mongo-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: mongo
+  ports:
+    - name: mongo
+      protocol: TCP
+      port: 27017
+      targetPort: mongo
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mongo-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

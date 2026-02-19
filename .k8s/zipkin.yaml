@@ -1,3 +1,15 @@
+# Deploy:
+#   kubectl apply -f .k8s/zipkin.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=zipkin
+#   kubectl logs -n game-library-infra deployment/zipkin
+#
+# Test connectivity (from within cluster):
+#   kubectl run -it --rm curl --image=curlimages/curl --namespace=game-library-infra \
+#     -- curl http://zipkin-service:9411/health
+#
+# =============================================================================
 kind: Deployment
 apiVersion: apps/v1
 metadata:
