@@ -30,6 +30,7 @@ jobs:
         run: |
           sed -i'' \
           -e 's/_DOMAIN_/${{ vars.DOMAIN }}/g' \
+          -e 's/_ACME_EMAIL_/${{ secrets.ACME_EMAIL }}/g' \
           .k8s/*.yaml
 
       - name: Diff changes
@@ -41,6 +42,7 @@ jobs:
           kubectl diff -f .k8s/mongo.yaml || true
           kubectl diff -f .k8s/opensearch.yaml || true
           kubectl diff -f .k8s/graylog.yaml || true
+          kubectl diff -f .k8s/cert.yaml || true
 
       - name: Apply manifests
         run: |
@@ -51,3 +53,4 @@ jobs:
           kubectl apply -f .k8s/mongo.yaml
           kubectl apply -f .k8s/opensearch.yaml
           kubectl apply -f .k8s/graylog.yaml
+          kubectl apply -f .k8s/cert.yaml
