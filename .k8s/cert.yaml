@@ -1,0 +1,36 @@
+# ClusterIssuer for VPS domain using HTTP-01 challenge via nginx ingress.
+# NOTE: If http-01 fails with "did not get expected response", check cert-manager pod dnsPolicy
+# (same fix as in game-library deployment).
+kind: ClusterIssuer
+apiVersion: cert-manager.io/v1
+metadata:
+  name: lets-encrypt
+spec:
+  acme:
+    email: _ACME_EMAIL_
+    server: "https://acme-v02.api.letsencrypt.org/directory"
+    privateKeySecretRef:
+      name: lets-encrypt-private-key
+    solvers:
+      - http01:
+          ingress:
+            class: public # microk8s ingress class
+---
+# ClusterIssuer for game-library domain using DNS-01 challenge via Cloudflare.
+# Requires cloudflare-api-token secret in cert-manager namespace (see secrets.yaml).
+kind: ClusterIssuer
+apiVersion: cert-manager.io/v1
+metadata:
+  name: lets-encrypt-dns
+spec:
+  acme:
+    email: _ACME_EMAIL_
+    server: "https://acme-v02.api.letsencrypt.org/directory"
+    privateKeySecretRef:
+      name: lets-encrypt-dns-private-key
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token

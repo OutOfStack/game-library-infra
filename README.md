@@ -88,13 +88,28 @@ make run-example
 ### Project Structure
 
 ```
-example/
-├── main.go       # Application entry point
-├── logger.go     # Zap + Graylog logger setup
-├── tracer.go     # OpenTelemetry tracer setup (Zipkin + OTLP exporters)
-├── metrics.go    # Prometheus metrics middleware
-├── handlers.go   # HTTP handlers
-├── client.go     # HTTP client with tracing + load generator
-├── go.mod
-└── go.sum
+game-library-infra/
+├── .github/workflows/
+│   └── main.yml          # CI/CD pipeline
+├── .k8s/
+│   ├── namespace.yaml    # Kubernetes namespace
+│   ├── cert.yaml         # Let's Encrypt ClusterIssuers (HTTP-01 & DNS-01)
+│   ├── secrets.yaml      # Secrets for MongoDB, Graylog, Cloudflare
+│   ├── graylog.yaml      # Graylog deployment
+│   ├── mongo.yaml        # MongoDB deployment
+│   ├── opensearch.yaml   # OpenSearch deployment
+│   ├── jaeger.yaml       # Jaeger deployment
+│   ├── prometheus.yaml   # Prometheus deployment
+│   └── zipkin.yaml       # Zipkin deployment (deprecated)
+├── example/
+│   ├── main.go           # Application entry point
+│   ├── logger.go         # Zap + Graylog logger setup
+│   ├── tracer.go         # OpenTelemetry tracer setup (Zipkin + OTLP exporters)
+│   ├── metrics.go        # Prometheus metrics middleware
+│   ├── handlers.go       # HTTP handlers
+│   ├── client.go         # HTTP client with tracing + load generator
+│   ├── go.mod
+│   └── go.sum
+├── docker-compose.yml    # Local development setup
+├── Makefile              # Build and run commands
 ```
