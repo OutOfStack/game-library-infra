@@ -42,6 +42,7 @@ jobs:
           kubectl diff -f .k8s/mongo.yaml || true
           kubectl diff -f .k8s/opensearch.yaml || true
           kubectl diff -f .k8s/graylog.yaml || true
+          kubectl diff -f .k8s/grafana.yaml || true
           kubectl diff -f .k8s/cert.yaml || true
 
       - name: Apply manifests
@@ -53,4 +54,5 @@ jobs:
           kubectl apply -f .k8s/mongo.yaml
           kubectl apply -f .k8s/opensearch.yaml
           kubectl apply -f .k8s/graylog.yaml
+          kubectl apply -f .k8s/grafana.yaml
           kubectl apply -f .k8s/cert.yaml

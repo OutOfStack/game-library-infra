@@ -1,0 +1,121 @@
+# Deploy:
+#   kubectl apply -f .k8s/grafana.yaml
+#
+# Verify:
+#   kubectl get pods -n game-library-infra -l app=grafana
+#   kubectl logs -n game-library-infra deployment/grafana
+#
+# Test connectivity (from within cluster):
+#   kubectl run -it --rm curl --image=curlimages/curl --namespace=game-library-infra \
+#     -- curl http://grafana-service:3000/api/health
+#
+# =============================================================================
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: grafana-pvc
+  namespace: game-library-infra
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: grafana
+  namespace: game-library-infra
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:13.0.0-23336907879-ubuntu
+          ports:
+            - name: grafana
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secret
+                  key: grafana-admin-password
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+              value: "false"
+            - name: GF_NEWS_NEWS_FEED_ENABLED
+              value: "false"
+          volumeMounts:
+            - name: grafana-storage-volume
+              mountPath: /var/lib/grafana
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: grafana
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: grafana
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: grafana-storage-volume
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: grafana-service
+  namespace: game-library-infra
+spec:
+  selector:
+    app: grafana
+  ports:
+    - protocol: TCP
+      name: grafana
+      port: 3000
+      targetPort: grafana
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: grafana-ingress
+  namespace: game-library-infra
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt-dns
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - grafana._DOMAIN_
+      secretName: grafana-tls
+  rules:
+    - host: grafana._DOMAIN_
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-service
+                port:
+                  name: grafana

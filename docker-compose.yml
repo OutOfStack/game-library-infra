@@ -110,6 +110,21 @@ services:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
 
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:13.0.0-23336907879-ubuntu
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+      - GF_NEWS_NEWS_FEED_ENABLED=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: always
+
 volumes:
   mongo_data:
     driver: local
@@ -118,6 +133,8 @@ volumes:
   graylog_data:
     driver: local
   prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
     
 configs:
