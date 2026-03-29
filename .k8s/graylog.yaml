@@ -98,6 +98,13 @@ spec:
           volumeMounts:
             - name: graylog-data
               mountPath: /usr/share/graylog/data/journal
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "400m"
       volumes:
         - name: graylog-data
           persistentVolumeClaim:

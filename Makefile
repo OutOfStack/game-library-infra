@@ -1,4 +1,4 @@
-.PHONY: zipkin jaeger graylog prometheus all stop clean run-example
+.PHONY: zipkin jaeger graylog prometheus grafana all stop clean run-example
 
 # Start Zipkin
 zipkin:
@@ -15,6 +15,10 @@ graylog:
 # Start Prometheus
 prometheus:
 	docker compose up -d prometheus
+
+# Start Grafana
+grafana:
+	docker compose up -d grafana
 
 # Start all services
 all:

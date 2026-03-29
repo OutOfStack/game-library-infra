@@ -10,6 +10,7 @@ Infrastructure services for [game-library](https://github.com/OutOfStack/game-li
 | **Jaeger** | Distributed tracing system with native OTLP support |
 | **Graylog** | Log management platform (with MongoDB and OpenSearch) |
 | **Prometheus** | Metrics collection and monitoring |
+| **Grafana** | Metrics visualization and dashboards |
 
 ## Quick Start with Docker
 
@@ -22,6 +23,7 @@ make zipkin
 make jaeger
 make prometheus
 make graylog
+make grafana
 
 # Stop all services
 make stop
@@ -39,6 +41,7 @@ make clean
 | Prometheus | http://localhost:9090 | No authentication required |
 | Graylog | http://localhost:9000 | `admin:admin` |
 | OpenSearch | http://localhost:9200 | No authentication (security disabled) |
+| Grafana | http://localhost:3000 | `admin:admin` |
 
 ## Graylog Setup
 
