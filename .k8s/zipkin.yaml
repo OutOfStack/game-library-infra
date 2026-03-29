@@ -48,6 +48,13 @@ spec:
               port: zipkin
             initialDelaySeconds: 5
             periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
 ---
 kind: Service
 apiVersion: v1

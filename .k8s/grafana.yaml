@@ -76,6 +76,13 @@ spec:
               port: grafana
             initialDelaySeconds: 5
             periodSeconds: 5
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"
       volumes:
         - name: grafana-storage-volume
           persistentVolumeClaim:

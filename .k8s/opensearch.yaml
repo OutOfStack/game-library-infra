@@ -55,8 +55,12 @@ spec:
             - configMapRef:
                 name: opensearch-config
           resources:
+            requests:
+              memory: "512Mi"
+              cpu: "100m"
             limits:
-              memory: 1Gi
+              memory: "1280Mi"
+              cpu: "400m"
           volumeMounts:
             - name: opensearch-data
               mountPath: /usr/share/opensearch/data
