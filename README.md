@@ -43,6 +43,36 @@ make clean
 | OpenSearch | http://localhost:9200 | No authentication (security disabled) |
 | Grafana | http://localhost:3000 | `admin:admin` |
 
+## Application metrics
+
+Prometheus discovers annotated pods in the `game-library` namespace automatically. Add this to your Deployment's `spec.template.metadata`:
+
+```yaml
+labels:
+  app: my-component # Prometheus job label
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "6060"
+```
+
+Declare the same TCP `containerPort` and serve `/metrics` on the pod interface. New components need no infra changes.
+
+For the initial migration, deploy the annotated API, auth, and worker manifests before infra. The infra workflow reloads Prometheus.
+
+game-library and auth (API and worker) serve `/metrics` on their debug port (`APP_DEBUG_ADDRESS`, 6060 in k8s), not on the API HTTP port.
+
+Local Compose uses explicit targets in `docker-compose.yml`, matching the backend repos' local debug ports:
+
+| Job | Target |
+|-----|--------|
+| `game-library` | `host.docker.internal:6060` |
+| `game-library-worker` | `host.docker.internal:6061` |
+| `game-library-auth` | `host.docker.internal:6062` |
+| `game-library-auth-worker` | `host.docker.internal:6063` |
+
+Run `make prometheus` after changing local targets.
+
 ## Graylog Setup
 
 After starting Graylog, you need to create a GELF input to receive logs:

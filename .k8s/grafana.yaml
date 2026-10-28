@@ -10,6 +10,17 @@
 #     -- curl http://grafana-service:3000/api/health
 #
 # =============================================================================
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: grafana-config
+  namespace: game-library-infra
+data:
+  GF_ANALYTICS_REPORTING_ENABLED: "false"
+  GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+  GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+  GF_NEWS_NEWS_FEED_ENABLED: "false"
+---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -47,20 +58,15 @@ spec:
           ports:
             - name: grafana
               containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: grafana-config
           env:
             - name: GF_SECURITY_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: grafana-secret
                   key: grafana-admin-password
-            - name: GF_ANALYTICS_REPORTING_ENABLED
-              value: "false"
-            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
-              value: "false"
-            - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
-              value: "false"
-            - name: GF_NEWS_NEWS_FEED_ENABLED
-              value: "false"
           volumeMounts:
             - name: grafana-storage-volume
               mountPath: /var/lib/grafana
