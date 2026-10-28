@@ -28,33 +28,39 @@ data:
         static_configs:
           - targets: ['localhost:9090']
           
-      - job_name: 'game-library'
+      - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
-          - role: endpoints
+          - role: pod
             namespaces:
               names:
                 - game-library
         relabel_configs:
-          - source_labels: [ __meta_kubernetes_service_name ]
+          - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_scrape ]
             action: keep
-            regex: game-library-service
-          - source_labels: [ __meta_kubernetes_endpoint_port_name ]
+            regex: 'true'
+          - source_labels: [ __meta_kubernetes_pod_phase ]
             action: keep
-            regex: api
-            
-      - job_name: 'game-library-auth'
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - game-library
-        relabel_configs:
-          - source_labels: [ __meta_kubernetes_service_name ]
+            regex: Running
+          - source_labels: [ __meta_kubernetes_pod_container_init ]
+            action: drop
+            regex: 'true'
+          - source_labels: [ __meta_kubernetes_pod_container_port_protocol ]
             action: keep
-            regex: game-library-auth-service
-          - source_labels: [ __meta_kubernetes_endpoint_port_name ]
+            regex: TCP
+          - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_port ]
             action: keep
-            regex: api
+            regex: '[0-9]+'
+          # keep only the annotated declared port (debug port for game-library), avoiding http/grpc duplicates
+          - source_labels: [ __meta_kubernetes_pod_container_port_number ]
+            action: keepequal
+            target_label: __meta_kubernetes_pod_annotation_prometheus_io_port
+          - source_labels: [ __meta_kubernetes_pod_annotation_prometheus_io_path ]
+            regex: '(/.*)'
+            target_label: __metrics_path__
+          # preserve the existing application job labels
+          - source_labels: [ __meta_kubernetes_pod_label_app ]
+            regex: '(.+)'
+            target_label: job
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1

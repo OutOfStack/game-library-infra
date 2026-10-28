@@ -21,7 +21,7 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Set context
-        uses: azure/k8s-set-context@v4
+        uses: azure/k8s-set-context@v5
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.K8S_CLUSTER_CONFIG }}
@@ -56,3 +56,8 @@ jobs:
           kubectl apply -f .k8s/graylog.yaml
           kubectl apply -f .k8s/grafana.yaml
           kubectl apply -f .k8s/cert.yaml
+
+      - name: Reload Prometheus configuration
+        run: |
+          kubectl rollout restart deployment/prometheus -n game-library-infra
+          kubectl rollout status deployment/prometheus -n game-library-infra --timeout=120s

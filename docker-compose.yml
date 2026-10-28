@@ -154,6 +154,22 @@ configs:
           static_configs:
             - targets: ['host.docker.internal:8000']
 
+        - job_name: 'game-library'
+          static_configs:
+            - targets: ['host.docker.internal:6060']
+
+        - job_name: 'game-library-worker'
+          static_configs:
+            - targets: ['host.docker.internal:6061']
+
+        - job_name: 'game-library-auth'
+          static_configs:
+            - targets: ['host.docker.internal:6062']
+
+        - job_name: 'game-library-auth-worker'
+          static_configs:
+            - targets: ['host.docker.internal:6063']
+
 networks:
   graylog:
     driver: bridge
